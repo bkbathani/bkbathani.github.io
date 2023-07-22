@@ -1,95 +1,104 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Narrative Visualization with D3.js</title>
+  <title>SPY Market Visualization</title>
   <script src="https://d3js.org/d3.v6.min.js"></script>
   <style>
     .chart {
-      width: 500px;
-      height: 300px;
-      border: 1px solid #ccc;
+      width: 800px;
+      height: 400px;
+    }
+
+    .bearish {
+      fill: red;
+    }
+
+    .bullish {
+      fill: green;
     }
   </style>
 </head>
 <body>
-  <h1>Narrative Visualization Example</h1>
+  <h1>SPY Market Visualization</h1>
   <div class="chart"></div>
 
   <script>
-    // Sample data for three cities over time
-    const data = [
-      { city: "City A", year: 2000, population: 100 },
-      { city: "City B", year: 2000, population: 120 },
-      { city: "City C", year: 2000, population: 90 },
-      { city: "City A", year: 2010, population: 150 },
-      { city: "City B", year: 2010, population: 130 },
-      { city: "City C", year: 2010, population: 110 },
-      { city: "City A", year: 2020, population: 200 },
-      { city: "City B", year: 2020, population: 180 },
-      { city: "City C", year: 2020, population: 160 },
-    ];
+    // Read the CSV file and create the visualization
+    d3.csv("SPY.csv").then(function(data) {
+      // Assuming the Date column in the CSV is in the format "YYYY-MM-DD"
+      const parseDate = d3.timeParse("%Y-%m-%d");
+      data.forEach(d => {
+        d.Date = parseDate(d.Date);
+        d.Close = +d.Close; // Convert Close prices to numbers
+      });
 
-    const svg = d3.select(".chart")
-      .append("svg")
-      .attr("width", 500)
-      .attr("height", 300);
+      const svg = d3.select(".chart")
+        .append("svg")
+        .attr("width", 800)
+        .attr("height", 400);
 
-    // Function to draw the bar chart for a specific year
-    function drawScene(year) {
-      const yearData = data.filter(d => d.year === year);
+      // Function to draw the bar chart for a specific year
+      function drawScene(startIndex, endIndex) {
+        const yearData = data.slice(startIndex, endIndex + 1);
+        const extent = d3.extent(yearData, d => d.Close);
 
-      const xScale = d3.scaleBand()
-        .domain(yearData.map(d => d.city))
-        .range([50, 450])
-        .padding(0.1);
+        const xScale = d3.scaleTime()
+          .domain(d3.extent(yearData, d => d.Date))
+          .range([50, 750]);
 
-      const yScale = d3.scaleLinear()
-        .domain([0, d3.max(yearData, d => d.population)])
-        .range([250, 50]);
+        const yScale = d3.scaleLinear()
+          .domain(extent)
+          .range([350, 50]);
 
-      const bars = svg.selectAll(".bar")
-        .data(yearData, d => d.city);
+        const bars = svg.selectAll(".bar")
+          .data(yearData);
 
-      bars.enter()
-        .append("rect")
-        .attr("class", "bar")
-        .attr("x", d => xScale(d.city))
-        .attr("y", 250)
-        .attr("width", xScale.bandwidth())
-        .attr("height", 0)
-        .transition()
-        .duration(1000)
-        .attr("y", d => yScale(d.population))
-        .attr("height", d => 250 - yScale(d.population));
+        bars.enter()
+          .append("rect")
+          .attr("class", "bar")
+          .attr("x", d => xScale(d.Date))
+          .attr("width", 2)
+          .attr("y", 350)
+          .attr("height", 0)
+          .attr("fill", (d, i) => {
+            // Determine if the market was bearish or bullish for each data point
+            return d.Close < yearData[i - 1]?.Close ? "red" : "green";
+          })
+          .transition()
+          .duration(500)
+          .attr("y", d => yScale(d.Close))
+          .attr("height", d => 350 - yScale(d.Close));
 
-      bars.exit()
-        .transition()
-        .duration(500)
-        .attr("y", 250)
-        .attr("height", 0)
-        .remove();
+        bars.exit()
+          .transition()
+          .duration(500)
+          .attr("y", 350)
+          .attr("height", 0)
+          .remove();
 
-      bars.transition()
-        .duration(1000)
-        .attr("x", d => xScale(d.city))
-        .attr("y", d => yScale(d.population))
-        .attr("width", xScale.bandwidth())
-        .attr("height", d => 250 - yScale(d.population));
-    }
+        bars.transition()
+          .duration(500)
+          .attr("x", d => xScale(d.Date))
+          .attr("y", d => yScale(d.Close))
+          .attr("height", d => 350 - yScale(d.Close))
+          .attr("fill", (d, i) => {
+            // Determine if the market was bearish or bullish for each data point
+            return d.Close < yearData[i - 1]?.Close ? "red" : "green";
+          });
+      }
 
-    // Initial scene
-    drawScene(2000);
+      // Initial scene (first year)
+      drawScene(0, 251);
 
-    // Delay and switch to the next scene after 3 seconds
-    setTimeout(() => {
-      drawScene(2010);
-    }, 3000);
-
-    // Delay and switch to the next scene after 3 more seconds
-    setTimeout(() => {
-      drawScene(2020);
-    }, 6000);
+      // Delay and switch to the next scene (next year) after 3 seconds
+      let currentIndex = 252;
+      setInterval(() => {
+        if (currentIndex < data.length) {
+          drawScene(currentIndex - 251, currentIndex);
+          currentIndex++;
+        }
+      }, 3000);
+    });
   </script>
 </body>
 </html>
-
