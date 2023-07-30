@@ -269,6 +269,64 @@
             displayAnnotation(svg,yearData[maxSPYPriceIndex].Date,'green',xScale,yScale,maxSPYPrice.toFixed(2),selectedPeriod,'maxSPYPrice');
             displayAnnotation(svg,yearData[maxMSFTPriceIndex].Date,'green',xScale,yScale,maxMSFTPrice.toFixed(2),selectedPeriod,'maxMSFTPrice');
             // Clear the previous chart before drawing the new one
+
+             if(selectedPeriod==10){
+              
+              svg.append("circle")
+                .attr('class','covid')
+                .attr("cx", 518)
+                .attr("cy", 275)
+                .attr("r", 5)
+                .attr("fill", 'red');
+
+                svg.append("line")
+                .attr('class','covid')
+                .attr("x1", 518)
+                .attr("y1", 200)
+                .attr("x2", 518)
+                .attr("y2", 380)
+                .attr("stroke", "red")
+                .attr("stroke-width", 2);
+              // Add a text label next to the data point
+              svg.append("text")
+               .attr('class','covid')
+                .attr("x", 518)
+                .attr("y", 275)
+                .text("COVID market Crash Day")
+                .attr("fill", 'black');
+            } else {
+              d3.selectAll(".covid").remove();
+            }
+
+            if(selectedPeriod==20){
+              
+              svg.append("circle")
+                .attr('class','y2008')
+                .attr("cx", 228)
+                .attr("cy", 280)
+                .attr("r", 5)
+                .attr("fill", 'red');
+
+                svg.append("line")
+                .attr('class','y2008')
+                .attr("x1", 228)
+                .attr("y1", 280)
+                .attr("x2", 228)
+                .attr("y2", 380)
+                .attr("stroke", "red")
+                .attr("stroke-width", 2);
+              // Add a text label next to the data point
+              svg.append("text")
+               .attr('class','y2008')
+                .attr("x", 228)
+                .attr("y", 265)
+                .text("2008 market Crash")
+                .attr("fill", 'red');
+            } else {
+              d3.selectAll(".y2008").remove();
+            }
+            
+
             g.selectAll(".line").remove();
             g.selectAll(".x-axis").remove();
             g.selectAll(".y-axis").remove();
@@ -373,10 +431,13 @@
               const spyVolatility = ((maxSPYPrice-minSPYPrice)*100/minSPYPrice).toFixed(2);
               if(selectedPeriod==1||selectedPeriod==3||selectedPeriod==5){
                 d3.select("#info2").select("p").text(" In last "+selectedPeriod+" year, if we compare min and max prices as shown in chart, microsoft stock has been fluctuated by "+msftVolatility+"%  compare to SPY which is fluctuated by "+spyVolatility+"%. So MSFT is "+(spyVolatility>msftVolatility?'less':'more')+" volatile than SPY");
+              } else if(selectedPeriod==10){
+                d3.select("#info2").select("p").text(selectedPeriod+" years period is too large to consider volatility. But notice the volatility at time of COVID crash. MSFT was less volatile than SPY.");
               } else{
-                d3.select("#info2").select("p").text(selectedPeriod+" years period is too large to consider volatility.");
+                d3.select("#info2").select("p").text(selectedPeriod+" years period is too large to consider volatility but notice the 2008 market crash and SPY was way down in 2008 and MSFT performed relative better than SPY.");
               }
 
+              
               if(selectedPeriod==20){
                 d3.select("#info3").select("p").text("So overall if you see MSFT is more volatile than SPY in short term but is a good investment stock in long term.");
               }
