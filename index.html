@@ -3,102 +3,509 @@
 <head>
   <title>SPY Market Visualization</title>
   <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script>
+    function highlightButton(button) {
+      const buttons = document.querySelectorAll('.impressive-button');
+
+      // Remove "selected" class from all buttons
+      buttons.forEach((btn) => {
+        btn.classList.remove('selected');
+      });
+
+      // Add "selected" class to the clicked button
+      button.classList.add('selected');
+    }
+  </script>
   <style>
     .chart {
       width: 800px;
       height: 400px;
     }
 
-    .bearish {
-      fill: red;
+    .line {
+      fill: none;
+      stroke-width: 2;
     }
 
-    .bullish {
-      fill: green;
+    .spy {
+      stroke: blue;
+      color: blue;
     }
+
+    .msft {
+      stroke: purple;
+      color: purple;
+    }
+
+    .red {
+      color: red;
+    }
+
+    .green{
+      color: green;
+    }
+
+    #mychart {
+      float: right;
+      width: 70%;
+    }
+
+    #info p {
+      float: left;
+      width: 30%;
+    }
+
+    #PriceChange {
+      float: left;
+      width: 25%;
+      border: 1px solid black;
+      border-spacing: 0px;
+    }
+
+    #PriceChange td{
+      border: 1px solid black;
+      
+    }
+
+    #PriceChange th{
+      border: 1px solid black;
+      
+    }
+  
+
+    /* Style for the slider */
+    .slider {
+      width: 700px;
+      margin-left: 50px;
+    }
+
+    .slider input {
+      width: 100%;
+    }
+
+      .signal-line {
+      fill: none;
+      stroke: green;
+      stroke-width: 2;
+    }
+
+    .baseline {
+      fill: none;
+      stroke: gray;
+      stroke-width: 1;
+      stroke-dasharray: 3, 3;
+    }
+
+
+    .tooltip {
+      position: absolute;
+      pointer-events: none;
+      background-color: #f9f9f9;
+      padding: 5px;
+      border: 1px solid #ccc;
+      font-size: 12px;
+    }
+
+    .zoom-rect {
+      fill: #ccc;
+      opacity: 0.2;
+      cursor: move;
+    }
+
+    .buttons{
+      margin-left: 45px;
+    }
+    
+    .impressive-button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 5px 5px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 4px -2px;
+      cursor: pointer;
+      transition: background-color 0.3s ease; /* Add a smooth transition on background-color change */
+    }
+
+    /* Highlight effect upon click */
+    .impressive-button.selected {
+      background-color: #2d2c28; /* Change the background color to a different color on click */
+    }
+
   </style>
 </head>
 <body>
-  <h1>SPY Market Visualization</h1>
-  <div class="chart"></div>
+  <div>
+  <h1>SPY vs MSFT Price changes comparision</h1>
+  <p>Is MSFT a good long term inverstment? Let's compare MSFT performance with respect to SPY for last 20 years based on a data available at <a href="https://finance.yahoo.com/quote/MSFT/chart?p=MSFT#eyJpbnRlcnZhbCI6Im1vbnRoIiwicGVyaW9kaWNpdHkiOjEsInRpbWVVbml0IjpudWxsLCJjYW5kbGVXaWR0aCI6NC4yNjg5MzkzOTM5MzkzOTQsImZsaXBwZWQiOmZhbHNlLCJ2b2x1bWVVbmRlcmxheSI6dHJ1ZSwiYWRqIjp0cnVlLCJjcm9zc2hhaXIiOnRydWUsImNoYXJ0VHlwZSI6ImxpbmUiLCJleHRlbmRlZCI6ZmFsc2UsIm1hcmtldFNlc3Npb25zIjp7fSwiYWdncmVnYXRpb25UeXBlIjoib2hsYyIsImNoYXJ0U2NhbGUiOiJwZXJjZW50IiwicGFuZWxzIjp7ImNoYXJ0Ijp7InBlcmNlbnQiOjEsImRpc3BsYXkiOiJNU0ZUIiwiY2hhcnROYW1lIjoiY2hhcnQiLCJpbmRleCI6MCwieUF4aXMiOnsibmFtZSI6ImNoYXJ0IiwicG9zaXRpb24iOm51bGx9LCJ5YXhpc0xIUyI6W10sInlheGlzUkhTIjpbImNoYXJ0Iiwi4oCMdm9sIHVuZHLigIwiXX19LCJsaW5lV2lkdGgiOjIsInN0cmlwZWRCYWNrZ3JvdW5kIjp0cnVlLCJldmVudHMiOnRydWUsImNvbG9yIjoiIzcyZDNmZiIsInN0cmlwZWRCYWNrZ3JvdWQiOnRydWUsInJhbmdlIjpudWxsLCJldmVudE1hcCI6eyJjb3Jwb3JhdGUiOnsiZGl2cyI6dHJ1ZSwic3BsaXRzIjp0cnVlfSwic2lnRGV2Ijp7fX0sInN5bWJvbHMiOlt7InN5bWJvbCI6Ik1TRlQiLCJzeW1ib2xPYmplY3QiOnsic3ltYm9sIjoiTVNGVCIsInF1b3RlVHlwZSI6IkVRVUlUWSIsImV4Y2hhbmdlVGltZVpvbmUiOiJBbWVyaWNhL05ld19Zb3JrIn0sInBlcmlvZGljaXR5IjoxLCJpbnRlcnZhbCI6Im1vbnRoIiwidGltZVVuaXQiOm51bGwsInNldFNwYW4iOm51bGx9LHsic3ltYm9sIjoiU1BZIiwic3ltYm9sT2JqZWN0Ijp7InN5bWJvbCI6IlNQWSJ9LCJwZXJpb2RpY2l0eSI6MSwiaW50ZXJ2YWwiOiJtb250aCIsInRpbWVVbml0IjpudWxsLCJzZXRTcGFuIjpudWxsLCJpZCI6IlNQWSIsInBhcmFtZXRlcnMiOnsiY29sb3IiOiIjYWQ2ZWZmIiwid2lkdGgiOjIsImlzQ29tcGFyaXNvbiI6dHJ1ZSwic2hhcmVZQXhpcyI6dHJ1ZSwiY2hhcnROYW1lIjoiY2hhcnQiLCJzeW1ib2xPYmplY3QiOnsic3ltYm9sIjoiU1BZIn0sInBhbmVsIjoiY2hhcnQiLCJmaWxsR2FwcyI6ZmFsc2UsImFjdGlvbiI6ImFkZC1zZXJpZXMiLCJzeW1ib2wiOiJTUFkiLCJnYXBEaXNwbGF5U3R5bGUiOiJ0cmFuc3BhcmVudCIsIm5hbWUiOiJTUFkiLCJvdmVyQ2hhcnQiOnRydWUsInVzZUNoYXJ0TGVnZW5kIjp0cnVlLCJoZWlnaHRQZXJjZW50YWdlIjowLjcsIm9wYWNpdHkiOjEsImhpZ2hsaWdodGFibGUiOnRydWUsInR5cGUiOiJsaW5lIiwic3R5bGUiOiJzdHhfbGluZV9jaGFydCJ9fV0sImN1c3RvbVJhbmdlIjp7InN0YXJ0IjoxMDU3MDMyMDAwMDAwLCJlbmQiOjE2ODA0OTQ0MDAwMDB9LCJzdHVkaWVzIjp7IuKAjHZvbCB1bmRy4oCMIjp7InR5cGUiOiJ2b2wgdW5kciIsImlucHV0cyI6eyJpZCI6IuKAjHZvbCB1bmRy4oCMIiwiZGlzcGxheSI6IuKAjHZvbCB1bmRy4oCMIn0sIm91dHB1dHMiOnsiVXAgVm9sdW1lIjoiIzAwYjA2MSIsIkRvd24gVm9sdW1lIjoiI2ZmMzMzYSJ9LCJwYW5lbCI6ImNoYXJ0IiwicGFyYW1ldGVycyI6eyJ3aWR0aEZhY3RvciI6MC40NSwiY2hhcnROYW1lIjoiY2hhcnQiLCJwYW5lbE5hbWUiOiJjaGFydCJ9fX0sInNldFNwYW4iOm51bGwsIndpZHRoIjoyfQ">Yahoo Finance</a></p>
+  
+  <div class="buttons">
+    <button class="impressive-button selected" onclick="highlightButton(this)">1Y</button>
+    <button class="impressive-button" onclick="highlightButton(this)">3Y</button>
+    <button class="impressive-button" onclick="highlightButton(this)">5Y</button>
+    <button class="impressive-button" onclick="highlightButton(this)">10Y</button>
+    <button class="impressive-button" onclick="highlightButton(this)">20Y</button>
+  </div>
+  <div id="info">
+      <p>
+      </p> 
+ </div>
+  
+  <div id="mychart">
+      <div class="tooltip" id="toolTipID"></div>
+      <div class="annotation"></div>
+      
+      <div class="chart"></div>
+      <script>
+        // Read the CSV file and create the visualization
+        d3.csv("SPY.csv").then(function(data) {
+          d3.csv("MSFT.csv").then(function(msftData) {
 
-  <script>
-    // Read the CSV file and create the visualization
-    d3.csv("SPY.csv").then(function(data) {
-      // Assuming the Date column in the CSV is in the format "YYYY-MM-DD"
-      const parseDate = d3.timeParse("%Y-%m-%d");
-      data.forEach(d => {
-        d.Date = parseDate(d.Date);
-        d.Close = +d.Close; // Convert Close prices to numbers
-      });
-
-      const svg = d3.select(".chart")
-        .append("svg")
-        .attr("width", 800)
-        .attr("height", 400);
-
-      // Function to draw the bar chart for a specific year
-      function drawScene(startIndex, endIndex) {
-        const yearData = data.slice(startIndex, endIndex + 1);
-        const extent = d3.extent(yearData, d => d.Close);
-
-        const xScale = d3.scaleTime()
-          .domain(d3.extent(yearData, d => d.Date))
-          .range([50, 750]);
-
-        const yScale = d3.scaleLinear()
-          .domain(extent)
-          .range([350, 50]);
-
-        const bars = svg.selectAll(".bar")
-          .data(yearData);
-
-        bars.enter()
-          .append("rect")
-          .attr("class", "bar")
-          .attr("x", d => xScale(d.Date))
-          .attr("width", 2)
-          .attr("y", 350)
-          .attr("height", 0)
-          .attr("fill", (d, i) => {
-            // Determine if the market was bearish or bullish for each data point
-            return d.Close < yearData[i - 1]?.Close ? "red" : "green";
-          })
-          .transition()
-          .duration(500)
-          .attr("y", d => yScale(d.Close))
-          .attr("height", d => 350 - yScale(d.Close));
-
-        bars.exit()
-          .transition()
-          .duration(500)
-          .attr("y", 350)
-          .attr("height", 0)
-          .remove();
-
-        bars.transition()
-          .duration(500)
-          .attr("x", d => xScale(d.Date))
-          .attr("y", d => yScale(d.Close))
-          .attr("height", d => 350 - yScale(d.Close))
-          .attr("fill", (d, i) => {
-            // Determine if the market was bearish or bullish for each data point
-            return d.Close < yearData[i - 1]?.Close ? "red" : "green";
+          const parseDate = d3.timeParse("%Y-%m-%d");
+          data.forEach(d => {
+            d.Date = parseDate(d.Date);
+            d.Close = +d.Close; // Convert Close prices to numbers
           });
-      }
 
-      // Initial scene (first year)
-      drawScene(0, 251);
 
-      // Delay and switch to the next scene (next year) after 3 seconds
-      let currentIndex = 252;
-      setInterval(() => {
-        if (currentIndex < data.length) {
-          drawScene(currentIndex - 251, currentIndex);
-          currentIndex++;
+          msftData.forEach(d => {
+            d.Date = parseDate(d.Date);
+            d.Close = +d.Close; // Convert Close prices to numbers
+          });
+        
+          data.forEach(function(d1) {
+            const match = msftData.find(function(d2) {
+              return d1.Date.getTime() === d2.Date.getTime();
+            });
+            if (match) {
+              d1.msftClose=match.Close;
+              d1.Close = d1.Close;
+            }
+          });
+
+          const svg = d3.select(".chart")
+            .append("svg")
+            .attr("width", 800)
+            .attr("height", 400);
+
+          const margin = { top: 0, right: 50, bottom: 20, left: 50 };
+          const width = 800 - margin.left - margin.right;
+          const height = 400 - margin.top - margin.bottom;
+
+          const xScale = d3.scaleTime()
+            .range([0, width]);
+
+          const yScale = d3.scaleLinear()
+          .domain([d3.min(data, d => Math.min(d.Close, d.msftClose)), d3.max(data, d => Math.max(d.Close, d.msftClose))+25])
+          .range([height - margin.bottom, margin.top]);
+
+
+          const xAxis = d3.axisBottom(xScale);
+          const yAxis = d3.axisLeft(yScale);
+
+          const line = d3.line()
+            .defined(d => !isNaN(d.Close)) 
+            .x(d => xScale(d.Date))
+            .y(d => yScale(d.Close));
+
+          const msftLine = d3.line()
+            .defined(d => !isNaN(d.msftClose)) 
+            .x(d => xScale(d.Date))
+            .y(d => yScale(d.msftClose));
+
+          const g = svg.append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        
+
+          function drawScene(selectedPeriod,xDomain) {
+            const currentDate = data[data.length - 1].Date;
+            console.log('currentDate : '+currentDate);
+            const startDate = new Date(currentDate);
+            startDate.setFullYear(startDate.getFullYear() - selectedPeriod);
+
+            const yearData = data.filter(d => d.Date >= startDate && d.Date <= currentDate);
+
+            const spyPrices = yearData.map((d) => d.Close);
+            
+            const [minSPYPrice, maxSPYPrice] = d3.extent(spyPrices);
+            const minSPYPriceIndex = d3.scan(spyPrices, (a, b) => a - minSPYPrice);
+            const maxSPYPriceIndex = d3.scan(spyPrices, (a, b) => b - maxSPYPrice);
+            console.log('minSPYPriceIndex : '+minSPYPriceIndex);
+            console.log('minSPYPrice : '+minSPYPrice);
+
+            console.log('maxSPYPriceIndex : '+maxSPYPriceIndex);
+            console.log('maxSPYPrice : '+maxSPYPrice);
+            const msftPrices = yearData.map((d) => d.msftClose);
+            const [minMSFTPrice, maxMSFTPrice] = d3.extent(msftPrices);
+            const minMSFTPriceIndex = d3.scan(msftPrices, (a, b) => a - minMSFTPrice);
+            const maxMSFTPriceIndex = d3.scan(msftPrices, (a, b) => b - maxMSFTPrice);
+
+            console.log('minMSFTPriceIndex : '+minMSFTPriceIndex);
+            console.log('minMSFTPrice : '+minMSFTPrice);
+
+            console.log('maxMSFTPriceIndex : '+maxMSFTPriceIndex);
+            console.log('maxMSFTPrice : '+maxMSFTPrice);
+
+            console.log(xDomain);
+            xScale.domain(xDomain||d3.extent(yearData, d => d.Date));
+            //yScale.domain(d3.extent(yearData, d => Math.max(d.Close, d.msftClose)));
+            yScale.domain([d3.min(data, d => Math.min(d.Close, d.msftClose)), d3.max(data, d => Math.max(d.Close, d.msftClose))+50]);
+        
+            console.log(data[minSPYPriceIndex]);
+            d3.selectAll('.minSPYPrice').remove();
+            d3.selectAll('.minMSFTPrice').remove();
+            d3.selectAll('.maxSPYPrice').remove();
+            d3.selectAll('.maxMSFTPrice').remove();
+            displayAnnotation(svg,yearData[minSPYPriceIndex].Date,'red',xScale,yScale,minSPYPrice.toFixed(2),selectedPeriod,'minSPYPrice');
+            displayAnnotation(svg,yearData[minMSFTPriceIndex].Date,'red',xScale,yScale,minMSFTPrice.toFixed(2),selectedPeriod,'minMSFTPrice');
+            displayAnnotation(svg,yearData[maxSPYPriceIndex].Date,'green',xScale,yScale,maxSPYPrice.toFixed(2),selectedPeriod,'maxSPYPrice');
+            displayAnnotation(svg,yearData[maxMSFTPriceIndex].Date,'green',xScale,yScale,maxMSFTPrice.toFixed(2),selectedPeriod,'maxMSFTPrice');
+            // Clear the previous chart before drawing the new one
+            g.selectAll(".line").remove();
+            g.selectAll(".x-axis").remove();
+            g.selectAll(".y-axis").remove();
+
+            g.append("path")
+              .datum(yearData)
+              .attr("class", "line spy")
+              .attr("d", line);
+
+              g.append("path")
+              .datum(yearData)
+              .attr("class", "line msft")
+              .attr("d", msftLine);
+
+            g.append("g")
+              .attr("class", "x-axis")
+              .attr("transform", "translate(0," + height + ")")
+              .call(xAxis);
+
+            g.append("g")
+              .attr("class", "y-axis")
+              .call(yAxis);
+
+            svg.append("text")
+              .attr("class", "axis-label")
+              .attr("x", width / 2 + margin.left)
+              .attr("y", height + margin.top + 40)
+              .text("Date");
+
+            svg.append("text")
+              .attr("class", "axis-label")
+              .attr("transform", "rotate(-90)")
+              .attr("x", -height / 2 - margin.top)
+              .attr("y", margin.left - 40)
+              .text("Price");
+
+              svg.append("line")
+                .attr("x1", 125) // Start x-coordinate (200 - 10)
+                .attr("y1", 10) // Start y-coordinate
+                .attr("x2", 100) // End x-coordinate
+                .attr("y2", 10) // End y-coordinate
+                .attr("stroke", "blue")
+                .attr("stroke-width", 3);
+
+              // Add the text "SPY" on the top right corner
+              svg.append("text")
+                .attr("x", 160) // x-coordinate (start at the end of the line)
+                .attr("y", 5) // y-coordinate (start at the same y-coordinate as the line)
+                .attr("text-anchor", "end") // Align text to the end (right) of the x-coordinate
+                .attr("dominant-baseline", "hanging") // Align text to the top of the y-coordinate
+                .attr("fill", "blue") // Set text color to blue
+                .text("SPY");
+
+              svg.append("line")
+                .attr("x1", 125) // Start x-coordinate (200 - 10)
+                .attr("y1", 25) // Start y-coordinate
+                .attr("x2", 100) // End x-coordinate
+                .attr("y2", 25) // End y-coordinate
+                .attr("stroke", "purple")
+                .attr("stroke-width", 3);
+
+              // Add the text "SPY" on the top right corner
+              svg.append("text")
+                .attr("x", 170) // x-coordinate (start at the end of the line)
+                .attr("y", 20) // y-coordinate (start at the same y-coordinate as the line)
+                .attr("text-anchor", "end") // Align text to the end (right) of the x-coordinate
+                .attr("dominant-baseline", "hanging") // Align text to the top of the y-coordinate
+                .attr("fill", "purple") // Set text color to blue
+                .text("MSFT");
+
+
+              const spyPriceChangeinperiod = ((yearData[yearData.length-1].Close-yearData[0].Close)*100/yearData[0].Close).toFixed(2);
+
+              const msftPriceChangeinperiod = ((yearData[yearData.length-1].msftClose-yearData[0].msftClose)*100/yearData[0].msftClose).toFixed(2);
+              
+              d3.select("#PriceChange").select("tbody").remove();
+              const tableContainer = d3.select("#PriceChange");
+              const tbody = tableContainer.append("tbody");
+              const stDate = yearData[0].Date.toLocaleDateString("en-US", {year: "numeric",month: "2-digit",day: "2-digit",});
+              const edDate = yearData[yearData.length-1].Date.toLocaleDateString("en-US", {year: "numeric",month: "2-digit",day: "2-digit",});
+              const priceChangeData =[{"ticker":"SPY","startDate":stDate,"endDate":edDate,"startPrice":yearData[0].Close.toFixed(2),"endPrice":yearData[yearData.length-1].Close.toFixed(2),"priceChange":spyPriceChangeinperiod+"%","period":selectedPeriod},
+              {"ticker":"MSFT","startDate":stDate,"endDate":edDate,"startPrice":yearData[0].msftClose.toFixed(2),"endPrice":yearData[yearData.length-1].msftClose.toFixed(2),"priceChange":msftPriceChangeinperiod+"%","period":selectedPeriod}];
+
+              const rows = tbody.selectAll("tr")
+                .data(priceChangeData)
+                .enter()
+                .append("tr");
+
+              // Add data cells to rows
+              rows.append("td").text(d => d.ticker);
+              rows.append("td").text(d => d.startDate);
+              rows.append("td").text(d => d.startPrice);
+              rows.append("td").text(d => d.endDate);
+              rows.append("td").text(d => d.endPrice);
+              rows.append("td").text(d => d.priceChange);
+              rows.append("td").text(d => d.period);
+
+              d3.select("#info").select("p").text("In last "+selectedPeriod+" years, MSFT price is increased by "+msftPriceChangeinperiod+"% and SPY price is increased by "+spyPriceChangeinperiod+"%. So MSFT has outperformed SPY in last "+selectedPeriod+" years");
+
+              const tooltip = d3.select(".tooltip");
+              svg.append("rect")
+                .attr("width", width+100)
+                .attr("height", height)
+                .style("opacity", 0)
+                .on("mouseover", function() {
+                  console.log('mouseover');
+                  tooltip.style("display", "block").style("left", (event.pageX + 58) + "px");
+
+                  const mouseX = d3.pointer(event)[0];
+                  console.log('mouseX : '+ mouseX);
+                  const xDate = xScale.invert(mouseX);
+                  xDate.setDate(xDate.getDate() - (25*selectedPeriod));
+                  const bisectDate = d3.bisector(d => d.Date).right;
+                  const index = bisectDate(data, xDate, 1);
+                
+                  const d0 = data[index - 1];
+                  const d1 = data[index];
+                // console.log(index+":"+data[index].Date);
+                  const d = (xDate - d0.Date) > (d1.Date - xDate) ? d1 : d0;
+                  const tooltipText = `Date: ${(d&&d.Date)?d.Date.toLocaleDateString():''} <p><span class="spy"> SPY: $${d.Close} </span> </p> <p> <span class="msft"> MSFT: $${d.msftClose} </span></p>`;
+                  //console.log(d);
+                  tooltip.text(tooltipText)
+                    .style("left", (event.pageX + 58) + "px")
+                    .style("top", (event.pageY - 30) + "px");
+                })
+                .on("mouseout", function() {
+                  tooltip.style("display", "none");
+                })
+                .on("mousemove", function(event) {
+                  const mouseX = d3.pointer(event)[0];
+                  console.log('mouseX : '+ mouseX);
+                  const xDate = xScale.invert(mouseX);
+                  xDate.setDate(xDate.getDate() - (25*selectedPeriod));
+                  console.log(xDate);
+                  const bisectDate = d3.bisector(d => d.Date).right;
+                  const index = bisectDate(data, xDate, 1);
+                
+                  tooltip.style("display", "block").style("left", (event.pageX + 58) + "px");
+                  const d0 = data[index - 1];
+                  const d1 = data[index];
+                  console.log(index+":"+index);
+                  const d = (xDate - d0.Date) > (d1.Date - xDate) ? d1 : d0;
+                  const spyPriceChange = ((d1.Close-d0.Close)*100/d1.Close).toFixed(2);
+                  const msftPriceChange = ((d1.msftClose-d0.msftClose)*100/d1.msftClose).toFixed(2);
+                  const tooltipText = `Date: ${(d&&d.Date)?d.Date.toLocaleDateString():''} <p><span class="${spyPriceChange<0?'red':'green'}"> SPY: $${d.Close} (${spyPriceChange}%) </span> </p> <p> <span class="${msftPriceChange<0?'red':'green'}"> MSFT: $${d.msftClose} (${msftPriceChange}%)  </span></p>`;
+                  //console.log('pageX : '+event.pageX);
+                  document.getElementById("toolTipID").innerHTML=tooltipText;
+                    // .style("left", (event.pageX + 58) + "px")
+                    // .style("top", (event.pageY - 30) + "px");
+                });
+
+              
+
+
+            // const zoomRect = svg.append("rect")
+            // .attr("class", "zoom-rect")
+            // .attr("width", 800)
+            // .attr("height", 400)
+            // .call(d3.zoom()
+            //   .scaleExtent([1, 10])
+            //   .extent([[50, 50], [750, 400]])
+            //   .translateExtent([[50, 0], [750, 400]])
+            //   .on("zoom", (event) => {
+            //     const newDomain = event.transform.rescaleX(xScale).domain();
+            //     drawScene(null, newDomain);
+            //   })
+            // );
+
+            
+          }
+
+          // Initial scene (1 year)
+          drawScene(1);
+
+          // Button event listeners for different time periods
+          const buttons = document.querySelectorAll(".buttons button");
+          buttons.forEach(button => {
+            button.addEventListener("click", function() {
+              const selectedPeriod = +this.textContent.slice(0, -1);
+              drawScene(selectedPeriod);
+            });
+          });
+
+        //   const drag = d3.drag().on("drag", function(event) {
+        //     const dx = event.dx;
+        //     const xScale = d3.scaleTime().domain(d3.extent(data, d => d.Date)).range([0, 700]);
+        //     const xDomain = xScale.domain();
+        //     const diff = xScale.invert(0) - xScale.invert(dx);
+        //     const newDomain = [xDomain[0] + diff, xDomain[1] + diff];
+        //     console.log('xDomain : '+xDomain);
+        //     console.log('diff : '+diff);
+        //     console.log('newDomain : '+newDomain);
+        //     drawScene(null, newDomain);
+        //   });
+
+        // svg.call(drag);
+
+          });
+        });
+
+        function displayAnnotation(svg,date,color,xScale,yScale,price,period,className){
+             // Add a circle to indicate the data point
+              date.setDate(date.getDate());
+             
+              svg.append("circle")
+                .attr("class", className)
+                .attr("cx", xScale(date)+50)
+                .attr("cy", yScale(price))
+                .attr("r", 5)
+                .attr("fill", color);
+
+
+              // Add a text label next to the data point
+              svg.append("text")
+                .attr("class", className)
+                .attr("x", xScale(date)+5)
+                .attr("y", color=='green'?yScale(price):yScale(price)+15)
+                .text((color=='green'?'Max: $':'Min: $')+price)
+                .attr("fill", color);
         }
-      }, 3000);
-    });
-  </script>
+      </script>
+    </div>
+    <div id="priceTableDiv">
+      <table id="PriceChange"> 
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Start Date</th>
+            <th>Start Price($)</th>
+            <th>End Date</th>
+            <th>End Price($)</th>
+            <th>Price Change</th>
+            <th>Period</th>
+          </tr>
+        </thead>
+      
+  
+      </table>
+      <p>&nbsp;</p>
+      <p> *Please note that stock split has not been considered in this analysis.</p>
+    </div>
+  </div>
 </body>
 </html>

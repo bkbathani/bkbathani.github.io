@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SPY Market Visualization with MACD (Drag-to-Zoom)</title>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <style>
+    .chart {
+      width: 800px;
+      height: 400px;
+    }
+
+    .line {
+      fill: none;
+      stroke-width: 2;
+    }
+
+    .closing-line {
+      stroke: blue;
+    }
+
+    .macd-line {
+      stroke: red;
+    }
+
+    .signal-line {
+      stroke: green;
+    }
+
+    .baseline {
+      stroke: gray;
+      stroke-width: 1;
+      stroke-dasharray: 3, 3;
+    }
+
+    .tooltip {
+      position: absolute;
+      pointer-events: none;
+      background-color: #f9f9f9;
+      padding: 5px;
+      border: 1px solid #ccc;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>SPY Market Visualization with MACD (Drag-to-Zoom)</h1>
+  <div class="chart"></div>
+  <div class="tooltip"></div>
+  <div class="buttons">
+    <button class="1y-button">1Y</button>
+    <button class="3y-button">3Y</button>
+    <button class="5y-button">5Y</button>
+    <button class="10y-button">10Y</button>
+    <button class="20y-button">20Y</button>
+  </div>
+
+  <script>
+    // Sample data
+    d3.csv("SPY.csv").then(function(data) {
+      // Assuming the Date column in the CSV is in the format "YYYY-MM-DD"
+      const parseDate = d3.timeParse("%Y-%m-%d");
+      data.forEach(d => {
+        d.Date = parseDate(d.Date);
+        d.Close = +d.Close; // Convert Close prices to numbers
+      });
+
+   
+    // Create SVG container
+    const svg = d3.select(".chart")
+      .append("svg")
+      .attr("width", 800)
+      .attr("height", 400);
+
+    const g = svg.append("g")
+      .attr("transform", "translate(50, 50)");
+
+    // Function to draw the line chart
+    function drawLineChart(selectedPeriod, xDomain) {
+      // Filter data based on the selected time period
+      const currentDate = data[data.length - 1].date;
+      const startDate = new Date(currentDate);
+      startDate.setFullYear(startDate.getFullYear() - selectedPeriod);
+
+      const filteredData = data.filter(d => d.date >= startDate && d.date <= currentDate);
+
+      // Create scales for the line chart
+      const xScale = d3.scaleTime()
+        .domain(xDomain || d3.extent(filteredData, d => d.date))
+        .range([0, 700]);
+
+      const yScale = d3.scaleLinear()
+        .domain(d3.extent(filteredData, d => d.value))
+        .range([350, 0]);
+
+      const line = d3.line()
+        .x(d => xScale(d.date))
+        .y(d => yScale(d.value));
+
+      // Clear previous chart
+      svg.selectAll(".line").remove();
+
+      // Draw closing price line
+      svg.append("path")
+        .datum(filteredData)
+        .attr("class", "line closing-line")
+        .attr("d", line);
+
+      // Calculate MACD values
+      const ema12 = d3.exponentialMovingAverage()
+        .windowSize(12)
+        .accumulator(d => d.value);
+
+      const ema26 = d3.exponentialMovingAverage()
+        .windowSize(26)
+        .accumulator(d => d.value);
+
+      const macdLine = d3
+        .line()
+        .x(d => xScale(d.date))
+        .y(d => yScale(ema12(d) - ema26(d)))
+        .curve(d3.curveMonotoneX);
+
+      const signalLine = d3
+        .line()
+        .x(d => xScale(d.date))
+        .y(d => yScale(ema12(d) - ema26(d)))
+        .curve(d3.curveMonotoneX);
+
+      // Draw the MACD line
+      g.append("path")
+        .datum(filteredData)
+        .attr("class", "line macd-line")
+        .attr("d", macdLine);
+
+      // Calculate baseline values (y = 0)
+      const baselineData = filteredData.map(d => ({ date: d.date, value: 0 }));
+
+      // Draw the baseline
+      g.append("path")
+        .datum(baselineData)
+        .attr("class", "line baseline")
+        .attr("d", line);
+
+      // Draw the signal line
+      g.append("path")
+        .datum(filteredData)
+        .attr("class", "line signal-line")
+        .attr("d", signalLine);
+
+      // Add the x-axis
+      g.append("g")
+        .attr("transform", "translate(0, 350)")
+        .call(d3.axisBottom(xScale));
+    }
+
+    // Initial scene (1 year)
+    drawLineChart(1);
+
+    // Button event listeners for different time periods
+    const buttons = document.querySelectorAll(".buttons button");
+    buttons.forEach(button => {
+      button.addEventListener("click", function() {
+        const selectedPeriod = +this.textContent.slice(0, -1);
+        drawLineChart(selectedPeriod);
+      });
+    });
+
+    // Add drag-to-zoom behavior
+    const drag = d3.drag()
+      .on("drag", function(event) {
+        const dx = event.dx;
+        const xScale = d3.scaleTime().domain(d3.extent(data, d => d.date)).range([0, 700]);
+        const xDomain = xScale.domain();
+        const diff = xScale.invert(0) - xScale.invert(dx);
+        const newDomain = [xDomain[0] + diff, xDomain[1] + diff];
+        drawLineChart(null, newDomain);
+      });
+
+    svg.call(drag);
+    });
+  </script>
+</body>
+</html>
